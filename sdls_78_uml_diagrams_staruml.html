@@ -1,0 +1,869 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Courier New',monospace;background:#fff;color:#222}
+.app{display:flex;flex-direction:column;height:100vh;min-height:600px}
+.titlebar{background:#2c2c2c;color:#eee;font-size:12px;padding:3px 10px;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.titlebar span{color:#aaa}
+.titlebar .dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+.dot-r{background:#ff5f57}.dot-y{background:#febc2e}.dot-g{background:#28c840}
+.menubar{background:#e8e8e8;border-bottom:1px solid #bbb;font-size:11px;padding:1px 4px;display:flex;gap:2px;flex-shrink:0}
+.menubar span{padding:2px 8px;cursor:default;border-radius:2px}
+.menubar span:hover{background:#ccc}
+.main{display:flex;flex:1;overflow:hidden}
+.sidebar{width:180px;background:#f0f0f0;border-right:1px solid #ccc;display:flex;flex-direction:column;flex-shrink:0;font-size:11px}
+.sidebar-title{background:#d0d0d0;padding:4px 8px;font-weight:bold;font-size:11px;border-bottom:1px solid #bbb;color:#333}
+.sidebar-list{overflow-y:auto;flex:1}
+.sidebar-section{padding:3px 8px;font-weight:bold;color:#555;background:#e4e4e4;border-bottom:1px solid #ddd;cursor:pointer;display:flex;align-items:center;gap:4px}
+.sidebar-item{padding:2px 8px 2px 20px;cursor:pointer;color:#333;border-bottom:1px solid #eee;font-size:10.5px}
+.sidebar-item:hover{background:#d8e8ff}
+.sidebar-item.active{background:#4a90d9;color:#fff}
+.right{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.toolbar{background:#e8e8e8;border-bottom:1px solid #bbb;padding:2px 6px;display:flex;gap:2px;align-items:center;flex-shrink:0;font-size:11px}
+.tool-btn{padding:1px 6px;border:1px solid #bbb;background:#f8f8f8;cursor:pointer;border-radius:2px;font-size:10px}
+.tool-btn:hover{background:#e0e0e0}
+.toolbar-sep{width:1px;height:16px;background:#bbb;margin:0 4px}
+.canvas-wrap{flex:1;overflow:auto;position:relative;background:#fff}
+.canvas{position:relative;min-width:900px;min-height:600px;background-image:linear-gradient(rgba(180,180,220,0.2) 1px,transparent 1px),linear-gradient(90deg,rgba(180,180,220,0.2) 1px,transparent 1px);background-size:20px 20px;padding:40px}
+.diagram-title{background:#2ecc71;color:#fff;font-size:13px;font-weight:bold;text-align:center;padding:6px 18px;border:2px solid #27ae60;border-radius:3px;display:inline-block;margin-bottom:24px;font-family:Arial,sans-serif}
+.diagram-area{display:flex;gap:40px;align-items:flex-start;flex-wrap:wrap}
+.uml-box{border:1.5px solid #555;background:#fff;min-width:160px;font-family:Arial,sans-serif;font-size:12px;box-shadow:2px 2px 4px rgba(0,0,0,0.08)}
+.uml-box-header{background:#e8f4f8;border-bottom:1.5px solid #555;padding:4px 10px;font-weight:bold;text-align:center;font-size:13px}
+.uml-box-header.actor{background:#fff3cd}
+.uml-box-header.blue{background:#cce5ff}
+.uml-box-section{border-bottom:1px solid #999;padding:4px 10px;min-height:20px}
+.uml-box-section:last-child{border-bottom:none}
+.uml-box-section div{padding:1px 0;font-size:11.5px}
+.uml-box-section div.private{color:#333}
+.uml-box-section div.protected{color:#333}
+.uml-box-section div.public{color:#333}
+.uml-row{display:flex;gap:60px;align-items:flex-start;flex-wrap:wrap}
+.arrow-label{font-family:Arial,sans-serif;font-size:11px;color:#333;margin-top:6px;text-align:center}
+.rel-section{margin-top:16px;padding:8px;background:#f9f9f9;border:1px dashed #aaa;font-family:Arial,sans-serif;font-size:11px;border-radius:3px}
+.rel-section div{padding:2px 0;color:#444}
+.section-label{font-weight:bold;color:#222;margin-bottom:4px;font-size:12px}
+.dfd-box{border:2px solid #555;padding:8px 14px;background:#fff;font-family:Arial,sans-serif;font-size:12px;font-weight:bold;display:inline-block;min-width:80px;text-align:center}
+.dfd-circle{border:2px solid #555;border-radius:50%;padding:8px 14px;background:#fff;font-family:Arial,sans-serif;font-size:11px;min-width:70px;text-align:center;display:inline-block}
+.dfd-store{border-top:2px solid #555;border-bottom:2px solid #555;padding:4px 14px;background:#fff;font-family:Arial,sans-serif;font-size:11px;min-width:100px;text-align:center;display:inline-block}
+.use-oval{border:1.5px solid #555;border-radius:50%;padding:5px 12px;background:#fff;font-family:Arial,sans-serif;font-size:11px;text-align:center;display:inline-block;min-width:90px}
+.stick-figure{font-size:11px;font-family:Arial,sans-serif;text-align:center;min-width:50px}
+.stick-head{width:22px;height:22px;border-radius:50%;border:1.5px solid #333;margin:0 auto 2px}
+.stick-body{width:2px;height:22px;background:#333;margin:0 auto}
+.stick-arms{display:flex;justify-content:center;align-items:center;gap:0}
+.stick-arm{width:20px;height:2px;background:#333}
+.stick-legs{display:flex;justify-content:center;gap:10px;margin-top:2px}
+.stick-leg{width:2px;height:18px;background:#333;transform-origin:top center}
+.leg-l{transform:rotate(-15deg)}.leg-r{transform:rotate(15deg)}
+.statusbar{background:#d0d0d0;border-top:1px solid #bbb;font-size:10px;padding:2px 10px;color:#555;display:flex;gap:20px;flex-shrink:0}
+.badge{background:#4a90d9;color:#fff;font-size:9px;padding:0 4px;border-radius:8px;margin-left:4px}
+</style>
+</head>
+<body>
+<div class="app">
+<div class="titlebar">
+  <span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span>
+  <span style="margin-left:8px">★ StarUML (SDLS — All 78 Problems)</span>
+</div>
+<div class="menubar">
+  <span>File</span><span>Edit</span><span>Format</span><span>Model</span><span>Tools</span><span>View</span><span>Window</span><span>Debug</span><span>Help</span>
+</div>
+<div class="main">
+<div class="sidebar">
+  <div class="sidebar-title">WORKING DIAGRAMS</div>
+  <div class="sidebar-list" id="sidebarList"></div>
+</div>
+<div class="right">
+<div class="toolbar">
+  <button class="tool-btn" onclick="prevDiagram()">◀ Prev</button>
+  <button class="tool-btn" onclick="nextDiagram()">Next ▶</button>
+  <div class="toolbar-sep"></div>
+  <span id="diagCounter" style="font-size:10px;color:#555"></span>
+  <div class="toolbar-sep"></div>
+  <input id="searchBox" placeholder="Search problems..." style="font-size:10px;padding:2px 6px;border:1px solid #bbb;border-radius:2px;width:160px" oninput="filterSidebar(this.value)"/>
+</div>
+<div class="canvas-wrap">
+  <div class="canvas" id="mainCanvas"></div>
+</div>
+</div>
+</div>
+<div class="statusbar">
+  <span id="statusProblem">Problem 1</span>
+  <span>SDLS — UML Diagrams</span>
+  <span>ADCET, Ashta — Dept. CSE (IoT & Cyber Security)</span>
+</div>
+</div>
+
+<script>
+const problems = [
+  {id:1,section:"DFD & Use Case",title:"Online Food Delivery Platform",type:"dfd-usecase",
+   dfd:{actors:["Customer","Restaurant","Delivery Agent"],processes:["1.0 Browse Restaurants","2.0 Place Order","3.0 Payment Process"],stores:["Orders DB","Items DB"]},
+   usecase:{actors:["Customer","Restaurant","Delivery Agent"],cases:["Browse Restaurants","Place Order","Track Delivery","Make Payment","Accept Order","Update Status"]}},
+  {id:2,section:"DFD & Use Case",title:"College Admission System",type:"dfd-usecase",
+   dfd:{actors:["Applicant","Admin"],processes:["1.0 Application Submission","2.0 Document Verification","3.0 Seat Allocation"],stores:["Applications DB","Seats DB"]},
+   usecase:{actors:["Applicant","Admin","Committee"],cases:["Submit Application","Upload Documents","Check Status","Verify Documents","Allocate Seat"]}},
+  {id:3,section:"DFD & Use Case",title:"Hospital Patient Record System",type:"dfd-usecase",
+   dfd:{actors:["Patient","Doctor"],processes:["1.0 Registration","2.0 Billing","3.0 Diagnosis"],stores:["Patient DB","Records"]},
+   usecase:{actors:["Patient","Doctor","Admin"],cases:["Register Patient","View Diagnosis","Pay Bill","Add Diagnosis","Prescribe Treatment","Generate Bill"]}},
+  {id:4,section:"DFD & Use Case",title:"Library Management System",type:"dfd-usecase",
+   dfd:{actors:["Member","Librarian"],processes:["1.0 Issue Book","2.0 Manage Books","3.0 Return Book"],stores:["Books DB","Members DB"]},
+   usecase:{actors:["Member","Librarian"],cases:["Search Book","Issue Book","Return Book","Add Book","Manage Members","View Fine"]}},
+  {id:5,section:"DFD & Use Case",title:"Online Banking System",type:"dfd-usecase",
+   dfd:{actors:["Customer","Bank Admin"],processes:["1.0 Fund Transfer","2.0 Balance Inquiry","3.0 Account Mgmt"],stores:["Accounts","Transactions"]},
+   usecase:{actors:["Customer","Bank Admin"],cases:["Login","Fund Transfer","Balance Inquiry","Account Statement","Manage Accounts","Generate Report"]}},
+  {id:6,section:"DFD & Use Case",title:"E-Commerce Platform",type:"dfd-usecase",
+   dfd:{actors:["Customer","Seller"],processes:["1.0 Product Search","2.0 Cart Mgmt","3.0 Order Placement"],stores:["Products","Orders"]},
+   usecase:{actors:["Customer","Seller"],cases:["Search Product","Add to Cart","Place Order","Make Payment","List Product","Manage Inventory"]}},
+  {id:7,section:"DFD & Use Case",title:"Railway Reservation System",type:"dfd-usecase",
+   dfd:{actors:["Passenger","Railway Admin"],processes:["1.0 Seat Booking","2.0 Cancellation","3.0 PNR Status"],stores:["Tickets","Trains"]},
+   usecase:{actors:["Passenger","Railway Admin"],cases:["Search Train","Book Ticket","Cancel Ticket","Check PNR","Manage Trains","View Reports"]}},
+  {id:8,section:"DFD & Use Case",title:"Movie Ticket Booking System",type:"dfd-usecase",
+   dfd:{actors:["User","Cinema Admin"],processes:["1.0 Select Movie","2.0 Select Seat","3.0 Payment"],stores:["Movies","Bookings"]},
+   usecase:{actors:["User","Cinema Admin"],cases:["Browse Movies","Select Seat","Make Payment","Download Ticket","Add Movie","Manage Shows"]}},
+  {id:9,section:"DFD & Use Case",title:"Online Examination System",type:"dfd-usecase",
+   dfd:{actors:["Student","Examiner"],processes:["1.0 Question Delivery","2.0 Result Generation","3.0 Answer Submission"],stores:["Questions","Results"]},
+   usecase:{actors:["Student","Examiner"],cases:["Login","Attempt Exam","Submit Answers","View Result","Create Exam","Evaluate"]}},
+  {id:10,section:"DFD & Use Case",title:"Hostel Management System",type:"dfd-usecase",
+   dfd:{actors:["Student","Warden"],processes:["1.0 Room Allocation","2.0 Fee Tracking","3.0 Complaint Mgmt"],stores:["Rooms","Fees"]},
+   usecase:{actors:["Student","Warden"],cases:["Apply for Room","Pay Fee","File Complaint","View Status","Allocate Room","Resolve Complaint"]}},
+  {id:11,section:"DFD & Use Case",title:"Courier Tracking System",type:"dfd-usecase",
+   dfd:{actors:["Sender","Receiver"],processes:["1.0 Shipment Booking","2.0 Real-time Tracking","3.0 Delivery Options"],stores:["Shipments","Routes"]},
+   usecase:{actors:["Sender","Courier Agent","Receiver"],cases:["Book Shipment","Track Shipment","Get Notification","Update Status","Manage Routes"]}},
+  {id:12,section:"DFD & Use Case",title:"Blood Bank System",type:"dfd-usecase",
+   dfd:{actors:["Donor","Hospital"],processes:["1.0 Donor Registration","2.0 Blood Availability","3.0 Request Fulfillment"],stores:["Donors","Blood Stock"]},
+   usecase:{actors:["Donor","Hospital","Patient"],cases:["Register as Donor","Donate Blood","Check Availability","Request Blood","Manage Stock"]}},
+  {id:13,section:"DFD & Use Case",title:"Vehicle Rental System",type:"dfd-usecase",
+   dfd:{actors:["Customer","Manager"],processes:["1.0 Booking","2.0 Return","3.0 Payment"],stores:["Vehicles","Bookings"]},
+   usecase:{actors:["Customer","Manager"],cases:["Browse Vehicles","Book Vehicle","Return Vehicle","Make Payment","Manage Fleet","View Reports"]}},
+  {id:14,section:"DFD & Use Case",title:"Smart Parking System",type:"dfd-usecase",
+   dfd:{actors:["Driver","Parking Admin"],processes:["1.0 Check Slot Availability","2.0 Book Slot","3.0 Payment to Exit"],stores:["Slots","Bookings"]},
+   usecase:{actors:["Driver","Parking Admin"],cases:["View Slot Map","Book Slot","Pay & Exit","Manage Slots","View Reports"]}},
+  {id:15,section:"DFD & Use Case",title:"Gym Membership System",type:"dfd-usecase",
+   dfd:{actors:["Member","Gym Admin"],processes:["1.0 Member Registration","2.0 Fee Tracking","3.0 Subscription Mgmt"],stores:["Members","Plans"]},
+   usecase:{actors:["Member","Gym Admin"],cases:["Register","Choose Plan","Pay Fee","Manage Members","Add Plans"]}},
+  {id:16,section:"DFD & Use Case",title:"Pharmacy System",type:"dfd-usecase",
+   dfd:{actors:["Customer","Pharmacist"],processes:["1.0 Prescription Processing","2.0 Check Inventory","3.0 Generate Bill"],stores:["Medicine Inventory","Billing Records"]},
+   usecase:{actors:["Customer","Pharmacist","Supplier","Admin"],cases:["Submit Prescription","Process Prescription","Dispense Medicine","Make Payment","Order Medicine","Check Stock"]}},
+  {id:17,section:"DFD & Use Case",title:"Municipal Complaint System",type:"dfd-usecase",
+   dfd:{actors:["Citizen","Municipal Officer"],processes:["1.0 Issue Registration","2.0 Complaint Tracking","3.0 Feedback Mgmt"],stores:["Complaints","Status"]},
+   usecase:{actors:["Citizen","Municipal Officer"],cases:["File Complaint","Track Status","Give Feedback","Assign Officer","Resolve Issue"]}},
+  {id:18,section:"DFD & Use Case",title:"Online Voting System",type:"dfd-usecase",
+   dfd:{actors:["Voter","Election Admin"],processes:["1.0 Voter Authentication","2.0 Vote Casting","3.0 Vote Counting"],stores:["Voters","Votes"]},
+   usecase:{actors:["Voter","Election Admin"],cases:["Register","Authenticate","Cast Vote","View Result","Manage Elections","Count Votes"]}},
+  {id:19,section:"DFD & Use Case",title:"Travel Agency System",type:"dfd-usecase",
+   dfd:{actors:["Customer","Travel Agent"],processes:["1.0 Browse Packages","2.0 Book Tour","3.0 Payment"],stores:["Packages","Bookings"]},
+   usecase:{actors:["Customer","Travel Agent"],cases:["Browse Packages","Book Tour","Make Payment","Manage Packages","Process Booking"]}},
+  {id:20,section:"DFD & Use Case",title:"Digital Wallet System",type:"dfd-usecase",
+   dfd:{actors:["User","Bank"],processes:["1.0 Transaction Process","2.0 Balance Mgmt","3.0 Bill Process"],stores:["Wallet","History"]},
+   usecase:{actors:["User","Bank"],cases:["Add Money","Transfer Money","Pay Bill","Sync Account","Transaction History"]}},
+  {id:21,section:"Class & Object",title:"Student Result System",type:"class-object",
+   classes:[
+     {name:"Student",attrs:["-studentId: int","-name: string","-marks: float","-percentage: float"],methods:["+getResult()"]},
+     {name:"Subject",attrs:["#subjectId: int","#name: string","#maxMarks: int"],methods:["+getSubject()"]},
+     {name:"Result",attrs:["-studentId: int","-totalMarks: int","-grade: string","-percentage: float","-points: int"],methods:[]},
+     {name:"Teacher",attrs:["-teacherId: int","-name: string","-addedResult()"],methods:[]},
+   ],
+   relations:[{from:"Student",to:"Result",type:"Association",mult:"1 → 1"},{from:"Student",to:"Subject",type:"Dependency"},{from:"Teacher",to:"Result",type:"Association"}],
+   objects:[{name:"s1:Student",attrs:["name = Arjun","roll = 101"]},{name:"r1:Result",attrs:["grade = A","total = 89"]}]},
+  {id:22,section:"Class & Object",title:"ATM System",type:"class-object",
+   classes:[
+     {name:"ATMMachine",attrs:["-machineId","- location","-deposit","-checkBalance()"],methods:[]},
+     {name:"ATMCard",attrs:["-cardNo","-pin","-balance","-validated"],methods:["+validate()"]},
+     {name:"Bank",attrs:["-bankId","-name","-authorized"],methods:[]},
+     {name:"Transaction",attrs:["-txnId","-type","-amount","-processed"],methods:[]},
+   ],
+   relations:[{from:"ATMCard",to:"ATMMachine",type:"uses"},{from:"ATMMachine",to:"Bank",type:"uses"},{from:"ATMMachine",to:"Transaction",type:"creates"}],
+   objects:[{name:"c1:ATMCard",attrs:["cardNo = 1234","balance = 5000"]},{name:"t2:Transaction",attrs:["type = Withdraw","amount = 500"]}]},
+  {id:23,section:"Class & Object",title:"Hotel Reservation System",type:"class-object",
+   classes:[
+     {name:"Guest",attrs:["-guestId","-name","-phone","-checkInDate()"],methods:[]},
+     {name:"Room",attrs:["-roomId","-type","-price","-cancelRoom()"],methods:[]},
+     {name:"Booking",attrs:["-bookingId","-date","-checkIn","-checkOut","-result"],methods:[]},
+     {name:"Bill",attrs:["-billId","-amount","-tax","-generated()"],methods:[]},
+   ],
+   relations:[{from:"Guest",to:"Booking",type:"makes"},{from:"Booking",to:"Room",type:"reserves"},{from:"Booking",to:"Bill",type:"generates"}],
+   objects:[{name:"g1:Guest",attrs:["name = Alice","phone = 9876"]},{name:"b1:Booking",attrs:["room = 1120","id = 801"]}]},
+  {id:24,section:"Class & Object",title:"Airline Booking System",type:"class-object",
+   classes:[
+     {name:"Passenger",attrs:["-passId","-name","-passport","-bookFlight()"],methods:[]},
+     {name:"Flight",attrs:["-flightNo","-from","-to","-seats","-getSchedule()"],methods:[]},
+     {name:"Ticket",attrs:["-ticketNo","-class","-fare","-generated","-print"],methods:[]},
+     {name:"Airport",attrs:["-airportCode","-name","-parkingFees()"],methods:[]},
+   ],
+   relations:[{from:"Passenger",to:"Ticket",type:"books"},{from:"Ticket",to:"Flight",type:"for"},{from:"Flight",to:"Airport",type:"operates at"}],
+   objects:[{name:"p1:Passenger",attrs:["name = Bob","passport = P121"]},{name:"t1:Ticket",attrs:["class = Economy","fare = 5000"]}]},
+  {id:25,section:"Class & Object",title:"Online Auction System",type:"class-object",
+   classes:[
+     {name:"Bidder",attrs:["-bidderId","-name","-balance","-placeBid()"],methods:[]},
+     {name:"Item",attrs:["-itemId","-name","-startPrice","-getInfo()"],methods:[]},
+     {name:"Bid",attrs:["-bidId","-amount","-time","-validate()"],methods:[]},
+     {name:"Auction",attrs:["-auctionId","-endTime","-currentBid()"],methods:[]},
+   ],
+   relations:[{from:"Bidder",to:"Bid",type:"places"},{from:"Bid",to:"Item",type:"for"},{from:"Auction",to:"Item",type:"contains"}],
+   objects:[{name:"b1:Bidder",attrs:["name = User1","balance = 2000"]},{name:"a1:Bid",attrs:["amount = 1500","time = 10:00"]}]},
+  {id:26,section:"Class & Object",title:"Inventory System",type:"class-object",
+   classes:[
+     {name:"Product",attrs:["-productId","-name","-price","-quantity","-updateStock()"],methods:[]},
+     {name:"Warehouse",attrs:["-warehouseId","-location","-capacity","-conserveStock()"],methods:[]},
+     {name:"Supplier",attrs:["-supplierId","-name","-supply()"],methods:[]},
+     {name:"StockSystem",attrs:["-updateItem","-add","-qty","-process()"],methods:[]},
+   ],
+   relations:[{from:"Product",to:"Warehouse",type:"stored in"},{from:"Supplier",to:"StockSystem",type:"feeds"},{from:"Warehouse",to:"StockSystem",type:"managed by"}],
+   objects:[{name:"p1:Product",attrs:["name = Laptop","qty = 50"]},{name:"w1:Warehouse",attrs:["No = Monday","id = 901"]}]},
+  {id:27,section:"Class & Object",title:"Employee Payroll System",type:"class-object",
+   classes:[
+     {name:"Employee",attrs:["-empId","-name","-role","-dept","-performance"],methods:[]},
+     {name:"Department",attrs:["-deptId","-name","-location","-getEmployees()"],methods:[]},
+     {name:"Payroll",attrs:["-payId","-month","-amount","-deductions","-calculated","-generate()"],methods:[]},
+     {name:"Attendance",attrs:["-attId","-days","-leaveDate","-calcPresent()"],methods:[]},
+   ],
+   relations:[{from:"Employee",to:"Payroll",type:"generates"},{from:"Payroll",to:"Attendance",type:"affects"},{from:"Employee",to:"Department",type:"belongs to"}],
+   objects:[{name:"e1:Employee",attrs:["name = Dave","dept = 126"]},{name:"p1:Payroll",attrs:["month = May","amount = 30000"]}]},
+  {id:28,section:"Class & Object",title:"Car Service System",type:"class-object",
+   classes:[
+     {name:"Vehicle",attrs:["-regNo","-model","-make","-year","-getService()"],methods:[]},
+     {name:"Customer",attrs:["-custId","-name","-phone","-bookService()"],methods:[]},
+     {name:"ServiceJob",attrs:["-jobId","-type","-cost","-result","-complete()"],methods:[]},
+     {name:"Mechanic",attrs:["-mechId","-name","-skill","-performService()"],methods:[]},
+   ],
+   relations:[{from:"Customer",to:"Vehicle",type:"owns"},{from:"Customer",to:"ServiceJob",type:"books"},{from:"ServiceJob",to:"Mechanic",type:"assigned to"}],
+   objects:[{name:"c1:Customer",attrs:["name = Sam","phone = 9000"]},{name:"s1:ServiceJob",attrs:["type = Oil Change","cost = 500"]}]},
+  {id:29,section:"Class & Object",title:"Online Learning Platform",type:"class-object",
+   classes:[
+     {name:"Student",attrs:["-studentId","-name","-email","-enrollCourse()"],methods:[]},
+     {name:"Course",attrs:["-courseId","-title","-duration","-getContent()"],methods:[]},
+     {name:"Instructor",attrs:["-instructorId","-name","-expertise","-createContent()"],methods:[]},
+     {name:"Certificate",attrs:["-certId","-courseDate","-generate()"],methods:[]},
+   ],
+   relations:[{from:"Student",to:"Course",type:"enrolls"},{from:"Instructor",to:"Course",type:"teaches"},{from:"Student",to:"Certificate",type:"receives"}],
+   objects:[{name:"s1:Student",attrs:["name = Maya","email = m@e.com"]},{name:"c1:Course",attrs:["title = Python 101","id = 999"]}]},
+  {id:30,section:"Class & Object",title:"Restaurant Ordering System",type:"class-object",
+   classes:[
+     {name:"Customer",attrs:["-custId","-name","-phone","-placeOrder()"],methods:[]},
+     {name:"MenuItem",attrs:["-itemId","-name","-price","-getDetails()"],methods:[]},
+     {name:"Order",attrs:["-orderId","-status","-confirm()","-cancel()"],methods:[]},
+     {name:"Bill",attrs:["-billId","-amount","-tax","-generate()"],methods:[]},
+   ],
+   relations:[{from:"Customer",to:"Order",type:"places"},{from:"Order",to:"MenuItem",type:"contains"},{from:"Order",to:"Bill",type:"generates"}],
+   objects:[{name:"c1:Customer",attrs:["name = Diana","id = 21"]},{name:"o1:Order",attrs:["status = placed","total = 450"]}]},
+  {id:31,section:"Class & Object",title:"Insurance System",type:"class-object",
+   classes:[
+     {name:"PolicyHolder",attrs:["-holderId","-name","-contact","-claimPolicy()"],methods:[]},
+     {name:"Policy",attrs:["-policyNo","-type","-premium","-cancel()"],methods:[]},
+     {name:"Claim",attrs:["-claimId","-amount","-status","-process()"],methods:[]},
+     {name:"Agent",attrs:["-agentId","-name","-getSales()"],methods:[]},
+   ],
+   relations:[{from:"PolicyHolder",to:"Policy",type:"holds"},{from:"Policy",to:"Claim",type:"has"},{from:"Agent",to:"Policy",type:"sells"}],
+   objects:[{name:"h1:PolicyHolder",attrs:["name = James","id = 41"]},{name:"p1:Policy",attrs:["type = Life","premium = 2000"]}]},
+  {id:32,section:"Class & Object",title:"Doctor Appointment System",type:"class-object",
+   classes:[
+     {name:"Patient",attrs:["-patientId","-name","-phone","-bookAppointment()"],methods:[]},
+     {name:"Doctor",attrs:["-doctorId","-name","-speciality","-getSchedule()"],methods:[]},
+     {name:"Appointment",attrs:["-apptId","-date","-time","-confirm()","-cancel()"],methods:[]},
+     {name:"Clinic",attrs:["-clinicId","-name","-location","-getSchedule()"],methods:[]},
+   ],
+   relations:[{from:"Patient",to:"Appointment",type:"books"},{from:"Doctor",to:"Appointment",type:"attends"},{from:"Doctor",to:"Clinic",type:"works at"}],
+   objects:[{name:"p1:Patient",attrs:["name = Raju","id = 43"]},{name:"a1:Appointment",attrs:["date = 12 May","time = 10am"]}]},
+  {id:33,section:"Class & Object",title:"Library Fine System",type:"class-object",
+   classes:[
+     {name:"Member",attrs:["-memberId","-name","-payFine()"],methods:[]},
+     {name:"Book",attrs:["-bookId","-title","-flag","-checkOut()","-checkIn()"]},
+     {name:"FineRecord",attrs:["-recordId","-days","-amount","-calculate()"],methods:[]},
+     {name:"Librarian",attrs:["-libId","-name","-issueFine()"],methods:[]},
+   ],
+   relations:[{from:"Member",to:"Book",type:"borrows"},{from:"Book",to:"FineRecord",type:"generates"},{from:"Librarian",to:"FineRecord",type:"issues"}],
+   objects:[{name:"m1:Member",attrs:["name = Leo","id = 411"]},{name:"f1:FineRecord",attrs:["days = 5","amount = 70"]}]},
+  {id:34,section:"Class & Object",title:"Parking Ticket System",type:"class-object",
+   classes:[
+     {name:"Vehicle",attrs:["-regNo","-type","-plate"],methods:[]},
+     {name:"ParkingSlot",attrs:["-slotId","-level","-available()"],methods:[]},
+     {name:"Ticket",attrs:["-ticketId","-inTime","-outTime","-calculateFee()"],methods:[]},
+     {name:"Payment",attrs:["-payId","-amount","-process()"],methods:[]},
+   ],
+   relations:[{from:"Vehicle",to:"ParkingSlot",type:"parks in"},{from:"Vehicle",to:"Ticket",type:"gets"},{from:"Ticket",to:"Payment",type:"generates"}],
+   objects:[{name:"v1:Vehicle",attrs:["regNo = MH12","type = Car"]},{name:"t1:Ticket",attrs:["inTime = 9am","outTime = 11am"]}]},
+  {id:35,section:"Class & Object",title:"Mobile Recharge System",type:"class-object",
+   classes:[
+     {name:"User",attrs:["-userId","-phone","-name","-recharge()"],methods:[]},
+     {name:"Plan",attrs:["-planId","-price","-validity","-data","-getPlans()"],methods:[]},
+     {name:"Recharge",attrs:["-rechargeId","-amount","-date","-process()"],methods:[]},
+     {name:"Operator",attrs:["-opId","-name","-activatePlan()"],methods:[]},
+   ],
+   relations:[{from:"User",to:"Recharge",type:"does"},{from:"Recharge",to:"Plan",type:"uses"},{from:"Operator",to:"Plan",type:"offers"}],
+   objects:[{name:"u1:User",attrs:["phone = 9898542213","id = 42"]},{name:"r1:Recharge",attrs:["amount = 199","date = 21 May"]}]},
+  {id:36,section:"Class & Object",title:"Online Grocery System",type:"class-object",
+   classes:[
+     {name:"Customer",attrs:["-custId","-name","-address","-placeOrder()"],methods:[]},
+     {name:"GroceryItem",attrs:["-itemId","-name","-price","-getDetails()"],methods:[]},
+     {name:"Order",attrs:["-orderId","-status","-confirm()","-cancel()"],methods:[]},
+     {name:"DeliveryBoy",attrs:["-dbId","-name","-status()"],methods:[]},
+   ],
+   relations:[{from:"Customer",to:"Order",type:"places"},{from:"Order",to:"GroceryItem",type:"contains"},{from:"Order",to:"DeliveryBoy",type:"assigned to"}],
+   objects:[{name:"c1:Customer",attrs:["name = Rita","addr = Pune"]},{name:"o1:Order",attrs:["status = Delivered","id = 15"]}]},
+  {id:37,section:"Class & Object",title:"Loan Processing System",type:"class-object",
+   classes:[
+     {name:"Applicant",attrs:["-appId","-name","-income","-applyLoan()"],methods:[]},
+     {name:"LoanApplication",attrs:["-loanId","-amount","-type","-submit()"],methods:[]},
+     {name:"BankOfficer",attrs:["-officerId","-name","-approve()"],methods:[]},
+     {name:"CreditBureau",attrs:["-score","-date","-evaluate()"],methods:[]},
+   ],
+   relations:[{from:"Applicant",to:"LoanApplication",type:"submits"},{from:"BankOfficer",to:"LoanApplication",type:"reviews"},{from:"CreditBureau",to:"LoanApplication",type:"validates"}],
+   objects:[{name:"a1:Applicant",attrs:["name = Kiran","income = 40000"]},{name:"l1:LoanApplication",attrs:["amount = 100000","type = Home"]}]},
+  {id:38,section:"Class & Object",title:"Event Management System",type:"class-object",
+   classes:[
+     {name:"Client",attrs:["-clientId","-name","-bookEvent()"],methods:[]},
+     {name:"Event",attrs:["-eventId","-name","-date","-schedule","-cancel()"],methods:[]},
+     {name:"Venue",attrs:["-venueId","-name","-capacity","-checkAvail()"],methods:[]},
+     {name:"EventPlanner",attrs:["-plannerId","-name","-organise()"],methods:[]},
+   ],
+   relations:[{from:"Client",to:"Event",type:"books"},{from:"Event",to:"Venue",type:"held at"},{from:"EventPlanner",to:"Event",type:"manages"}],
+   objects:[{name:"c1:Client",attrs:["name = Ria","id = 21"]},{name:"e1:Event",attrs:["name = Wedding","date = 23 Jun"]}]},
+  {id:39,section:"Class & Object",title:"Fitness Tracker System",type:"class-object",
+   classes:[
+     {name:"User",attrs:["-userId","-name","-age","-trackActivity()"],methods:[]},
+     {name:"Activity",attrs:["-actId","-type","-duration","-track()"],methods:[]},
+     {name:"HealthReport",attrs:["-reportId","-calories","-steps","-generate()"],methods:[]},
+     {name:"Goal",attrs:["-goalId","-target","-deadline","-achieve()"],methods:[]},
+   ],
+   relations:[{from:"User",to:"Activity",type:"logs"},{from:"Activity",to:"HealthReport",type:"included in"},{from:"HealthReport",to:"Goal",type:"sets"}],
+   objects:[{name:"u1:User",attrs:["name = Nina","age = 25"]},{name:"a1:Activity",attrs:["type = Running","dur = 30min"]}]},
+  {id:40,section:"Class & Object",title:"Book Publishing System",type:"class-object",
+   classes:[
+     {name:"Author",attrs:["-authorId","-name","-bio","-writeBook()"],methods:[]},
+     {name:"Book",attrs:["-bookId","-title","-isbn","-price","-genre","-publish()"],methods:[]},
+     {name:"Publisher",attrs:["-pubId","-name","-region","-created","-distribute()"],methods:[]},
+     {name:"Reader",attrs:["-readerId","-name","-purchase()"],methods:[]},
+   ],
+   relations:[{from:"Author",to:"Book",type:"writes"},{from:"Publisher",to:"Book",type:"publishes"},{from:"Reader",to:"Book",type:"reads"}],
+   objects:[{name:"a1:Author",attrs:["name = Scott","bio = Novelist"]},{name:"b1:Book",attrs:["title = Python Basics","isbn = BF5S1"]}]},
+  {id:41,section:"Sequence & Collab",title:"User Login Authentication",type:"sequence",
+   actors:["User","Browser","Web Server","Auth DB"],
+   messages:[{from:0,to:1,msg:"enterCredentials"},{from:1,to:2,msg:"sendRequest"},{from:2,to:3,msg:"queryUser"},{from:3,to:2,msg:"userRecord"},{from:2,to:1,msg:"validate"},{from:1,to:0,msg:"loginSuccess"}]},
+  {id:42,section:"Sequence & Collab",title:"Online Payment Processing",type:"sequence",
+   actors:["Customer","App","PayGateway","Bank","Merchant"],
+   messages:[{from:0,to:1,msg:"initiatePayment"},{from:1,to:2,msg:"sendDetails"},{from:2,to:3,msg:"authoriseCard"},{from:3,to:2,msg:"approved"},{from:2,to:4,msg:"notify"},{from:4,to:0,msg:"confirmation"}]},
+  {id:43,section:"Sequence & Collab",title:"Cart and Checkout Flow",type:"sequence",
+   actors:["User","UI","CartService","OrderService","Payment"],
+   messages:[{from:0,to:1,msg:"addItem"},{from:1,to:2,msg:"updateCart"},{from:2,to:2,msg:"getItems"},{from:1,to:3,msg:"checkout"},{from:3,to:4,msg:"processPayment"},{from:4,to:0,msg:"order Confirmed"}]},
+  {id:44,section:"Sequence & Collab",title:"ATM Cash Withdrawal",type:"sequence",
+   actors:["User","ATM","Bank Server","Account DB"],
+   messages:[{from:0,to:1,msg:"insertCard"},{from:1,to:1,msg:"validateCard"},{from:1,to:2,msg:"fetchBalance"},{from:2,to:3,msg:"accountInfo"},{from:2,to:1,msg:"approved"},{from:1,to:0,msg:"dispenseCash"}]},
+  {id:45,section:"Sequence & Collab",title:"Ticket Booking Confirmation",type:"sequence",
+   actors:["User","App","BookingService","Payment","Email"],
+   messages:[{from:0,to:1,msg:"selectTrip"},{from:1,to:2,msg:"checkAvailability"},{from:2,to:1,msg:"available"},{from:1,to:3,msg:"makePayment"},{from:3,to:3,msg:"processPayment"},{from:3,to:4,msg:"sendConfirmation"}]},
+  {id:46,section:"Sequence & Collab",title:"Password Reset via OTP",type:"sequence",
+   actors:["User","App","AuthService","SMSCloud","UserDB"],
+   messages:[{from:0,to:1,msg:"requestReset"},{from:1,to:2,msg:"sendOTPRequest"},{from:2,to:3,msg:"sendOTP"},{from:0,to:1,msg:"enterOTP"},{from:2,to:4,msg:"saveOTP"},{from:2,to:1,msg:"resetAllowed"}]},
+  {id:47,section:"Sequence & Collab",title:"Order Cancellation Workflow",type:"sequence",
+   actors:["User","App","OrderService","RefundService","Notification"],
+   messages:[{from:0,to:1,msg:"requestCancel"},{from:1,to:2,msg:"cancelOrder"},{from:2,to:2,msg:"initateRefund"},{from:2,to:3,msg:"refund"},{from:3,to:4,msg:"sendNotification"},{from:4,to:0,msg:"refundConfirm"}]},
+  {id:48,section:"Sequence & Collab",title:"Email Sent from System to User",type:"sequence",
+   actors:["System","EmailService","SMTP Server","User Inbox"],
+   messages:[{from:0,to:1,msg:"triggerEmail"},{from:1,to:1,msg:"composeEmail"},{from:1,to:2,msg:"deliverEmail"},{from:2,to:3,msg:"delivered"},{from:1,to:0,msg:"deliveryReport"},{from:0,to:0,msg:"emailSent"}]},
+  {id:49,section:"Sequence & Collab",title:"Chat Messaging System",type:"sequence",
+   actors:["Sender","ChatApp","ChatServer","Receiver"],
+   messages:[{from:0,to:1,msg:"typeMessage"},{from:1,to:2,msg:"pushMessage"},{from:2,to:2,msg:"storeMessage"},{from:2,to:3,msg:"deliverMessage"},{from:3,to:1,msg:"msgDelivered"},{from:1,to:0,msg:"delivered"}]},
+  {id:50,section:"Sequence & Collab",title:"File Upload to Server",type:"sequence",
+   actors:["User","Browser","Upload API","Storage","DB"],
+   messages:[{from:0,to:1,msg:"selectFile"},{from:1,to:2,msg:"uploadRequest"},{from:2,to:3,msg:"saveFile"},{from:3,to:3,msg:"fileInfo"},{from:3,to:4,msg:"saveMetadata"},{from:4,to:1,msg:"uploadConfirm"}]},
+  {id:51,section:"Sequence & Collab",title:"Online Quiz Submission",type:"sequence",
+   actors:["Student","Quiz App","Quiz Server","Score DB"],
+   messages:[{from:0,to:1,msg:"startQuiz"},{from:1,to:2,msg:"loadQuestions"},{from:2,to:1,msg:"questions"},{from:0,to:1,msg:"submitAnswers"},{from:1,to:2,msg:"evaluateAnswers"},{from:2,to:3,msg:"saveScore"}]},
+  {id:52,section:"Sequence & Collab",title:"Loan Approval Process",type:"sequence",
+   actors:["Applicant","Portal","LoanOfficer","CreditBureau","LoanDB"],
+   messages:[{from:0,to:1,msg:"apply Loan"},{from:1,to:2,msg:"reviewApplication"},{from:2,to:3,msg:"requestCredit"},{from:3,to:2,msg:"creditScore"},{from:2,to:4,msg:"updateStatus"},{from:4,to:0,msg:"loanDecision"}]},
+  {id:53,section:"Sequence & Collab",title:"Cab Booking and Driver Assignment",type:"sequence",
+   actors:["Passenger","CabApp","MatchingService","Driver","Maps"],
+   messages:[{from:0,to:1,msg:"requestRide"},{from:1,to:2,msg:"findDriver"},{from:2,to:4,msg:"getCurrentLocation"},{from:2,to:3,msg:"driverFound"},{from:2,to:2,msg:"assignDriver"},{from:1,to:0,msg:"rideConfirmed"}]},
+  {id:54,section:"Sequence & Collab",title:"Ride Completion and Payment",type:"sequence",
+   actors:["Passenger","CabApp","PaymentService","Driver"],
+   messages:[{from:0,to:1,msg:"rideEnd"},{from:1,to:2,msg:"calculateFare"},{from:2,to:2,msg:"finalAmount"},{from:0,to:1,msg:"payFare"},{from:1,to:2,msg:"processPayment"},{from:2,to:3,msg:"driverPayout"}]},
+  {id:55,section:"Sequence & Collab",title:"Food Order Placement",type:"sequence",
+   actors:["User","App","OrderMgr","Restaurant","Delivery"],
+   messages:[{from:0,to:1,msg:"selectItems"},{from:1,to:2,msg:"placeOrder"},{from:2,to:3,msg:"notifyRestaurant"},{from:3,to:3,msg:"orderAccepted"},{from:2,to:4,msg:"assignDelivery"},{from:4,to:0,msg:"orderConfirmed"}]},
+  {id:56,section:"Sequence & Collab",title:"Notification Sending Mechanism",type:"sequence",
+   actors:["System","NotifService","FCM/APNS","UserDevice"],
+   messages:[{from:0,to:1,msg:"triggerPush"},{from:1,to:1,msg:"sendPush"},{from:1,to:2,msg:"deliverToDevice"},{from:2,to:2,msg:"processNotif"},{from:1,to:1,msg:"deliveryStatus"},{from:2,to:3,msg:"showNotification"}]},
+  {id:57,section:"Sequence & Collab",title:"Feedback Submission Process",type:"sequence",
+   actors:["User","App","FeedbackService","AnalyticsDB"],
+   messages:[{from:0,to:1,msg:"submitFeedback"},{from:1,to:2,msg:"storeFeedback"},{from:2,to:3,msg:"logAnalytics"},{from:3,to:3,msg:"report"},{from:2,to:1,msg:"feedbackStored"},{from:1,to:0,msg:"thankYou"}]},
+  {id:58,section:"Sequence & Collab",title:"Refund Processing Interaction",type:"sequence",
+   actors:["Customer","App","RefundService","PaymentGW","Bank"],
+   messages:[{from:0,to:1,msg:"requestRefund"},{from:1,to:2,msg:"initiateRefund"},{from:2,to:3,msg:"processRefund"},{from:3,to:4,msg:"notifyBank"},{from:4,to:3,msg:"credit"},{from:3,to:0,msg:"refundDone"}]},
+  {id:59,section:"Statechart & Activity",title:"ATM Machine States",type:"state-activity",
+   states:["Idle","Card Inserted","PIN Entry","Transaction","Dispensing","Out of Service"],
+   transitions:[{from:"Idle",to:"Card Inserted",label:"insert card"},{from:"Card Inserted",to:"PIN Entry",label:"enter PIN"},{from:"PIN Entry",to:"Transaction",label:"PIN ok"},{from:"Transaction",to:"Dispensing",label:"dispense"},{from:"Dispensing",to:"Idle",label:"eject"},{from:"PIN Entry",to:"Out of Service",label:"fail"}],
+   activities:["Insert Card","Enter PIN","Select Transaction","Dispense/Process","Eject Card"]},
+  {id:60,section:"Statechart & Activity",title:"Order Lifecycle",type:"state-activity",
+   states:["Placed","Confirmed","Prepared","Out for Delivery","Delivered"],
+   transitions:[{from:"Placed",to:"Confirmed",label:"confirm"},{from:"Confirmed",to:"Prepared",label:"prepare"},{from:"Prepared",to:"Out for Delivery",label:"dispatch"},{from:"Out for Delivery",to:"Delivered",label:"deliver"}],
+   activities:["Place Order","Confirm Order","Prepare Order","Dispatch","Deliver"]},
+  {id:61,section:"Statechart & Activity",title:"Student Enrollment",type:"state-activity",
+   states:["Applied","Verified","Fee Paid","Enrolled"],
+   transitions:[{from:"Applied",to:"Verified",label:"verify"},{from:"Verified",to:"Fee Paid",label:"pay fee"},{from:"Fee Paid",to:"Enrolled",label:"enroll"}],
+   activities:["Submit Application","Verify Documents","Pay Fee","Get Enrolled"]},
+  {id:62,section:"Statechart & Activity",title:"Book Issue and Return",type:"state-activity",
+   states:["Available","Issued","Overdue","Returned"],
+   transitions:[{from:"Available",to:"Issued",label:"issue"},{from:"Issued",to:"Overdue",label:"due passed"},{from:"Overdue",to:"Returned",label:"return"},{from:"Issued",to:"Returned",label:"return"}],
+   activities:["Request Book","Check Availability","Issue Book","Return Book"]},
+  {id:63,section:"Statechart & Activity",title:"Traffic Light System",type:"state-activity",
+   states:["RED","GREEN","YELLOW"],
+   transitions:[{from:"RED",to:"GREEN",label:"timer"},{from:"GREEN",to:"YELLOW",label:"timer"},{from:"YELLOW",to:"RED",label:"timer"}],
+   activities:["RED - Stop","GREEN - Go","YELLOW - Slow"]},
+  {id:64,section:"Statechart & Activity",title:"Elevator System",type:"state-activity",
+   states:["Idle","Moving Up","Moving Down","Door Open"],
+   transitions:[{from:"Idle",to:"Moving Up",label:"call floor"},{from:"Moving Up",to:"Door Open",label:"floor reached"},{from:"Door Open",to:"Moving Down",label:"close door"},{from:"Moving Down",to:"Idle",label:"dest reached"}],
+   activities:["Receive Call","Move to Floor","Open Door","Passengers Board","Close Door"]},
+  {id:65,section:"Statechart & Activity",title:"Online Order Delivery",type:"state-activity",
+   states:["Order Placed","Processing","Shipped","Out for Delivery","Delivered"],
+   transitions:[{from:"Order Placed",to:"Processing",label:"confirm"},{from:"Processing",to:"Shipped",label:"ship"},{from:"Shipped",to:"Out for Delivery",label:"local hub"},{from:"Out for Delivery",to:"Delivered",label:"deliver"}],
+   activities:["Place Order","Process Order","Ship Package","Out for Delivery","Deliver"]},
+  {id:66,section:"Statechart & Activity",title:"Loan Application States",type:"state-activity",
+   states:["Submitted","Under Review","Approved","Disbursed"],
+   transitions:[{from:"Submitted",to:"Under Review",label:"review"},{from:"Under Review",to:"Approved",label:"approve"},{from:"Approved",to:"Disbursed",label:"disburse"}],
+   activities:["Submit Application","Credit Check","Officer Review","Approve/Reject","Disburse"]},
+  {id:67,section:"Statechart & Activity",title:"User Account States",type:"state-activity",
+   states:["Registered","Active","Suspended","Blocked"],
+   transitions:[{from:"Registered",to:"Active",label:"activate"},{from:"Active",to:"Suspended",label:"report"},{from:"Suspended",to:"Blocked",label:"inactive"}],
+   activities:["Register","Verify Email","Activate Account","Use Account","Deactivate"]},
+  {id:68,section:"Statechart & Activity",title:"Online Exam Execution",type:"state-activity",
+   states:["Not Started","In Progress","Submitted","Evaluated"],
+   transitions:[{from:"Not Started",to:"In Progress",label:"start"},{from:"In Progress",to:"Submitted",label:"submit"},{from:"Submitted",to:"Evaluated",label:"evaluate"}],
+   activities:["Login","Start Exam","Answer Questions","Submit Exam","View Result"]},
+  {id:69,section:"Statechart & Activity",title:"Payment Transaction States",type:"state-activity",
+   states:["Initiated","Pending","Completed","Failed"],
+   transitions:[{from:"Initiated",to:"Pending",label:"OTP"},{from:"Pending",to:"Completed",label:"success"},{from:"Pending",to:"Failed",label:"timeout"}],
+   activities:["Initiate Payment","Validate Details","Process Payment","Confirmed"]},
+  {id:70,section:"Statechart & Activity",title:"Patient Flow in Hospital",type:"state-activity",
+   states:["Registration","OPD Consult","Admitted","Treatment","Discharged"],
+   transitions:[{from:"Registration",to:"OPD Consult",label:"consult"},{from:"OPD Consult",to:"Admitted",label:"admit"},{from:"Admitted",to:"Treatment",label:"treat"},{from:"Treatment",to:"Discharged",label:"discharge"}],
+   activities:["Register Patient","OPD Consultation","Admit/Test","Billing","Discharge"]},
+  {id:71,section:"Statechart & Activity",title:"Ride Booking Lifecycle",type:"state-activity",
+   states:["Requested","Driver Assigned","En Route","Completed"],
+   transitions:[{from:"Requested",to:"Driver Assigned",label:"assign"},{from:"Driver Assigned",to:"En Route",label:"start"},{from:"En Route",to:"Completed",label:"finish"}],
+   activities:["Request Ride","Match Driver","Driver En Route","Pickup Passenger","Complete Ride"]},
+  {id:72,section:"Statechart & Activity",title:"Complaint Resolution",type:"state-activity",
+   states:["Filed","Assigned","In Progress","Resolved"],
+   transitions:[{from:"Filed",to:"Assigned",label:"assign"},{from:"Assigned",to:"In Progress",label:"investigate"},{from:"In Progress",to:"Resolved",label:"resolve"}],
+   activities:["File Complaint","Assign Officer","Investigate","Resolve Issue","Close Ticket"]},
+  {id:73,section:"Statechart & Activity",title:"Manufacturing Workflow",type:"state-activity",
+   states:["Raw Material","Production","Quality Check","Packaging","Shipped"],
+   transitions:[{from:"Raw Material",to:"Production",label:"start"},{from:"Production",to:"Quality Check",label:"done"},{from:"Quality Check",to:"Packaging",label:"pass"},{from:"Packaging",to:"Shipped",label:"ship"}],
+   activities:["Get Raw Material","Produce Item","Quality Check","Package","Ship"]},
+  {id:74,section:"Statechart & Activity",title:"Login System Activity",type:"state-activity",
+   states:["Enter Credentials","Validate","Auth Success","Home Page"],
+   transitions:[{from:"Enter Credentials",to:"Validate",label:"submit"},{from:"Validate",to:"Auth Success",label:"valid"},{from:"Auth Success",to:"Home Page",label:"grant"}],
+   activities:["Open Login Page","Enter Username/Password","Validate Credentials","Grant Access"]},
+  {id:75,section:"Statechart & Activity",title:"Banking Transaction Workflow",type:"state-activity",
+   states:["Initiated","Validated","Processed","Completed"],
+   transitions:[{from:"Initiated",to:"Validated",label:"validate"},{from:"Validated",to:"Processed",label:"process"},{from:"Processed",to:"Completed",label:"confirm"}],
+   activities:["Login to NetBanking","Enter Transaction Details","Validate & Authorise","Process Txn","Get Receipt"]},
+  {id:76,section:"Statechart & Activity",title:"Hotel Booking Cancellation",type:"state-activity",
+   states:["Booking Active","Cancel Request","Refund Init","Cancelled"],
+   transitions:[{from:"Booking Active",to:"Cancel Request",label:"request cancel"},{from:"Cancel Request",to:"Refund Init",label:"check policy"},{from:"Refund Init",to:"Cancelled",label:"process refund"}],
+   activities:["Request Cancel","Check Policy","Approve Cancel","Process Refund","Confirm Cancel"]},
+  {id:77,section:"Statechart & Activity",title:"Leave Approval Workflow",type:"state-activity",
+   states:["Applied","Under Review","Approved","Rejected"],
+   transitions:[{from:"Applied",to:"Under Review",label:"review"},{from:"Under Review",to:"Approved",label:"approve"},{from:"Under Review",to:"Rejected",label:"reject"}],
+   activities:["Apply for Leave","Manager Review","Approve/Reject","Update Calendar"]},
+  {id:78,section:"Statechart & Activity",title:"LMS Course Completion",type:"state-activity",
+   states:["Enrolled","In Progress","Quiz Passed","Completed"],
+   transitions:[{from:"Enrolled",to:"In Progress",label:"start"},{from:"In Progress",to:"Quiz Passed",label:"pass quiz"},{from:"Quiz Passed",to:"Completed",label:"complete"}],
+   activities:["Enroll in Course","Watch Lessons","Attempt Quiz","Pass Quiz","Get Certificate"]},
+];
+
+let currentIdx = 0;
+let filteredProblems = [...problems];
+
+function buildSidebar(list) {
+  const sb = document.getElementById('sidebarList');
+  sb.innerHTML = '';
+  let lastSection = '';
+  list.forEach((p, i) => {
+    if(p.section !== lastSection) {
+      lastSection = p.section;
+      const sec = document.createElement('div');
+      sec.className = 'sidebar-section';
+      sec.textContent = p.section;
+      sb.appendChild(sec);
+    }
+    const item = document.createElement('div');
+    item.className = 'sidebar-item' + (p === problems[currentIdx] ? ' active' : '');
+    item.textContent = p.id + '. ' + p.title;
+    item.onclick = () => { currentIdx = problems.indexOf(p); render(); buildSidebar(filteredProblems); };
+    sb.appendChild(item);
+  });
+}
+
+function filterSidebar(q) {
+  if(!q.trim()) { filteredProblems = [...problems]; }
+  else { filteredProblems = problems.filter(p => p.title.toLowerCase().includes(q.toLowerCase()) || String(p.id).includes(q)); }
+  buildSidebar(filteredProblems);
+}
+
+function prevDiagram() { if(currentIdx > 0) { currentIdx--; render(); buildSidebar(filteredProblems); } }
+function nextDiagram() { if(currentIdx < problems.length-1) { currentIdx++; render(); buildSidebar(filteredProblems); } }
+
+function makeUMLBox(cls) {
+  const div = document.createElement('div');
+  div.className = 'uml-box';
+  const h = document.createElement('div');
+  h.className = 'uml-box-header blue';
+  h.textContent = cls.name;
+  div.appendChild(h);
+  if(cls.attrs && cls.attrs.length) {
+    const s = document.createElement('div');
+    s.className = 'uml-box-section';
+    cls.attrs.forEach(a => {
+      const d = document.createElement('div');
+      d.className = 'private';
+      d.textContent = a;
+      s.appendChild(d);
+    });
+    div.appendChild(s);
+  }
+  const ms = cls.methods || [];
+  const defaultMethods = ['+Add'+cls.name+'()`,+Update'+cls.name+'()`,+Display'+cls.name+'()`,+Delete'+cls.name+'()'];
+  const finalMethods = ms.length ? ms : [];
+  if(finalMethods.length || true) {
+    const s2 = document.createElement('div');
+    s2.className = 'uml-box-section';
+    (finalMethods.length ? finalMethods : ['+add()','+update()','+display()','+delete()']).forEach(m => {
+      const d = document.createElement('div');
+      d.className = 'public';
+      d.textContent = m;
+      s2.appendChild(d);
+    });
+    div.appendChild(s2);
+  }
+  return div;
+}
+
+function makeStickFigure(name) {
+  return `<div class="stick-figure">
+    <div class="stick-head"></div>
+    <div style="display:flex;justify-content:center;align-items:center">
+      <div class="stick-arm"></div><div class="stick-body" style="height:22px"></div><div class="stick-arm"></div>
+    </div>
+    <div class="stick-legs"><div class="stick-leg leg-l"></div><div class="stick-leg leg-r"></div></div>
+    <div style="margin-top:2px;font-size:10px">${name}</div>
+  </div>`;
+}
+
+function makeUseOval(text) {
+  return `<div class="use-oval">${text}</div>`;
+}
+
+function renderDFDUseCase(p, canvas) {
+  canvas.innerHTML = `<div class="diagram-title">Class Diagram — ${p.title}</div>`;
+  const area = document.createElement('div');
+  area.style.cssText = 'display:flex;gap:48px;flex-wrap:wrap;align-items:flex-start';
+
+  // DFD side
+  const dfdDiv = document.createElement('div');
+  dfdDiv.style.cssText = 'min-width:300px;flex:1';
+  dfdDiv.innerHTML = `<div style="font-weight:bold;margin-bottom:10px;font-size:12px;color:#333;font-family:Arial">DFD — ${p.title}</div>`;
+  const dfdInner = document.createElement('div');
+  dfdInner.style.cssText = 'border:1.5px dashed #bbb;padding:16px;background:#fafafa;min-height:200px;font-family:Arial';
+  // Actors row
+  const ar = document.createElement('div');
+  ar.style.cssText = 'display:flex;gap:16px;justify-content:space-between;margin-bottom:12px';
+  p.dfd.actors.forEach(a => {
+    ar.innerHTML += `<div class="dfd-box" style="font-size:11px;padding:5px 10px">${a}</div>`;
+  });
+  dfdInner.appendChild(ar);
+  // Processes
+  const pr = document.createElement('div');
+  pr.style.cssText = 'display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:12px';
+  p.dfd.processes.forEach(proc => {
+    pr.innerHTML += `<div class="dfd-circle" style="min-width:80px;padding:8px">${proc}</div>`;
+  });
+  dfdInner.appendChild(pr);
+  // Data stores
+  const sr = document.createElement('div');
+  sr.style.cssText = 'display:flex;gap:16px;justify-content:center;margin-bottom:4px';
+  p.dfd.stores.forEach(s => {
+    sr.innerHTML += `<div class="dfd-store">${s}</div>`;
+  });
+  dfdInner.appendChild(sr);
+  dfdDiv.appendChild(dfdInner);
+  dfdDiv.innerHTML += `<div style="text-align:center;font-size:10px;color:#888;margin-top:4px;font-family:Arial">Diagram 1 — Data Flow Diagram (DFD)</div>`;
+  area.appendChild(dfdDiv);
+
+  // Use Case side
+  const ucDiv = document.createElement('div');
+  ucDiv.style.cssText = 'min-width:300px;flex:1';
+  ucDiv.innerHTML = `<div style="font-weight:bold;margin-bottom:10px;font-size:12px;color:#333;font-family:Arial">Use Case Diagram — ${p.title}</div>`;
+  const ucInner = document.createElement('div');
+  ucInner.style.cssText = 'border:1.5px dashed #bbb;padding:16px;background:#fafafa;min-height:200px;font-family:Arial;display:flex;gap:16px;align-items:flex-start';
+  // Actors
+  const actDiv = document.createElement('div');
+  actDiv.style.cssText = 'display:flex;flex-direction:column;gap:18px;padding-right:8px';
+  p.usecase.actors.slice(0,2).forEach(a => {
+    actDiv.innerHTML += makeStickFigure(a);
+  });
+  ucInner.appendChild(actDiv);
+  // System boundary
+  const sysDiv = document.createElement('div');
+  sysDiv.style.cssText = 'border:1.5px solid #999;padding:10px;flex:1;min-height:150px;border-radius:4px';
+  sysDiv.innerHTML = `<div style="font-size:10px;text-align:center;margin-bottom:8px;color:#555">${p.title}</div>`;
+  const ovals = document.createElement('div');
+  ovals.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;justify-content:center';
+  p.usecase.cases.forEach(uc => {
+    ovals.innerHTML += makeUseOval(uc);
+  });
+  sysDiv.appendChild(ovals);
+  ucInner.appendChild(sysDiv);
+  // More actors
+  if(p.usecase.actors.length > 2) {
+    const actDiv2 = document.createElement('div');
+    actDiv2.style.cssText = 'display:flex;flex-direction:column;gap:18px;padding-left:8px';
+    p.usecase.actors.slice(2).forEach(a => {
+      actDiv2.innerHTML += makeStickFigure(a);
+    });
+    ucInner.appendChild(actDiv2);
+  }
+  ucDiv.appendChild(ucInner);
+  ucDiv.innerHTML += `<div style="text-align:center;font-size:10px;color:#888;margin-top:4px;font-family:Arial">Diagram 2 — Use Case Diagram</div>`;
+  area.appendChild(ucDiv);
+  canvas.appendChild(area);
+}
+
+function renderClassObject(p, canvas) {
+  canvas.innerHTML = `<div class="diagram-title">Class Diagram — ${p.title}</div>`;
+  const area = document.createElement('div');
+  area.style.cssText = 'display:flex;gap:48px;flex-wrap:wrap;align-items:flex-start';
+
+  // Class Diagram
+  const cdDiv = document.createElement('div');
+  cdDiv.style.cssText = 'min-width:340px;flex:1';
+  cdDiv.innerHTML = `<div style="font-weight:bold;margin-bottom:10px;font-size:12px;color:#333;font-family:Arial">Class Diagram — ${p.title}</div>`;
+  const cdInner = document.createElement('div');
+  cdInner.style.cssText = 'border:1.5px dashed #bbb;padding:16px;background:#fafafa;font-family:Arial';
+  const boxRow = document.createElement('div');
+  boxRow.style.cssText = 'display:flex;gap:14px;flex-wrap:wrap;justify-content:center';
+  p.classes.forEach(cls => { boxRow.appendChild(makeUMLBox(cls)); });
+  cdInner.appendChild(boxRow);
+  // Relations
+  if(p.relations) {
+    const rel = document.createElement('div');
+    rel.className = 'rel-section';
+    rel.innerHTML = '<div class="section-label">Relationships</div>';
+    p.relations.forEach(r => {
+      rel.innerHTML += `<div>— ${r.from} <span style="color:#4a90d9">${r.type}</span> ${r.to}${r.mult?' ('+r.mult+')':''}</div>`;
+    });
+    cdInner.appendChild(rel);
+  }
+  cdDiv.appendChild(cdInner);
+  cdDiv.innerHTML += `<div style="text-align:center;font-size:10px;color:#888;margin-top:4px;font-family:Arial">Diagram 1 — Class Diagram</div>`;
+  area.appendChild(cdDiv);
+
+  // Object Diagram
+  const odDiv = document.createElement('div');
+  odDiv.style.cssText = 'min-width:260px;flex:1';
+  odDiv.innerHTML = `<div style="font-weight:bold;margin-bottom:10px;font-size:12px;color:#333;font-family:Arial">Object Diagram — ${p.title}</div>`;
+  const odInner = document.createElement('div');
+  odInner.style.cssText = 'border:1.5px dashed #bbb;padding:16px;background:#fafafa;font-family:Arial;min-height:120px';
+  const objRow = document.createElement('div');
+  objRow.style.cssText = 'display:flex;gap:24px;flex-wrap:wrap;align-items:center;justify-content:center';
+  if(p.objects) {
+    p.objects.forEach(obj => {
+      const ob = document.createElement('div');
+      ob.className = 'uml-box';
+      ob.style.cssText = 'min-width:130px;background:#e8f4f8';
+      const hd = document.createElement('div');
+      hd.className = 'uml-box-header';
+      hd.style.background = '#b8d8ec';
+      hd.style.fontStyle = 'italic';
+      hd.textContent = obj.name;
+      ob.appendChild(hd);
+      const sec = document.createElement('div');
+      sec.className = 'uml-box-section';
+      obj.attrs.forEach(a => {
+        const d = document.createElement('div');
+        d.style.fontSize = '11px';
+        d.textContent = a;
+        sec.appendChild(d);
+      });
+      ob.appendChild(sec);
+      objRow.appendChild(ob);
+    });
+  }
+  const arrow = document.createElement('div');
+  arrow.style.cssText = 'font-size:22px;color:#4a90d9;display:flex;align-items:center';
+  arrow.textContent = '→';
+  if(p.objects && p.objects.length >= 2) { objRow.insertBefore(arrow, objRow.children[1]); }
+  odInner.appendChild(objRow);
+  odDiv.appendChild(odInner);
+  odDiv.innerHTML += `<div style="text-align:center;font-size:10px;color:#888;margin-top:4px;font-family:Arial">Diagram 2 — Object Diagram</div>`;
+  area.appendChild(odDiv);
+  canvas.appendChild(area);
+}
+
+function renderSequence(p, canvas) {
+  canvas.innerHTML = `<div class="diagram-title">Sequence Diagram — ${p.title}</div>`;
+  const area = document.createElement('div');
+  area.style.cssText = 'display:flex;gap:48px;flex-wrap:wrap;align-items:flex-start';
+
+  function makeSeqDiagram(label) {
+    const sdDiv = document.createElement('div');
+    sdDiv.style.cssText = 'min-width:320px;flex:1;font-family:Arial';
+    sdDiv.innerHTML = `<div style="font-weight:bold;margin-bottom:10px;font-size:12px;color:#333">Sequence Diagram — ${p.title}</div>`;
+    const sdInner = document.createElement('div');
+    sdInner.style.cssText = 'border:1.5px dashed #bbb;padding:14px;background:#fafafa;overflow-x:auto';
+    // Actor boxes
+    const colW = Math.max(100, Math.floor(680 / p.actors.length));
+    const seqTable = document.createElement('div');
+    seqTable.style.cssText = `display:flex;gap:0;font-family:Arial;font-size:11px;min-width:${p.actors.length*colW}px`;
+    p.actors.forEach(a => {
+      const col = document.createElement('div');
+      col.style.cssText = `width:${colW}px;display:flex;flex-direction:column;align-items:center`;
+      const box = document.createElement('div');
+      box.style.cssText = 'border:1.5px solid #555;padding:4px 8px;background:#e8f0fb;font-weight:bold;font-size:11px;text-align:center;min-width:80px;max-width:110px';
+      box.textContent = a;
+      col.appendChild(box);
+      // Lifeline
+      const ll = document.createElement('div');
+      ll.style.cssText = 'width:1px;background:repeating-linear-gradient(to bottom,#555 0,#555 5px,transparent 5px,transparent 10px);flex:1;min-height:200px;margin-top:0';
+      col.appendChild(ll);
+      seqTable.appendChild(col);
+    });
+    sdInner.appendChild(seqTable);
+    // Messages overlay
+    const msgArea = document.createElement('div');
+    msgArea.style.cssText = 'position:relative;margin-top:-200px;height:200px;pointer-events:none';
+    p.messages.forEach((msg, i) => {
+      const y = 20 + i * 28;
+      const fromX = (msg.from + 0.5) * colW;
+      const toX = (msg.to + 0.5) * colW;
+      const msgDiv = document.createElement('div');
+      msgDiv.style.cssText = `position:absolute;top:${y}px;left:${Math.min(fromX,toX)}px;width:${Math.abs(toX-fromX)}px;height:20px;display:flex;align-items:center`;
+      const line = document.createElement('div');
+      line.style.cssText = `height:1.5px;background:#555;flex:1`;
+      msgDiv.appendChild(line);
+      const arrow = document.createElement('div');
+      arrow.style.cssText = `font-size:10px;color:#555;${toX>fromX?'':'transform:scaleX(-1)'}`;
+      arrow.textContent = '▶';
+      if(toX>fromX) msgDiv.appendChild(arrow); else msgDiv.insertBefore(arrow,line);
+      const label2 = document.createElement('div');
+      label2.style.cssText = `position:absolute;top:-12px;left:${Math.abs(toX-fromX)*0.2}px;font-size:9.5px;color:#333;white-space:nowrap;background:#fafafa;padding:0 2px`;
+      label2.textContent = msg.msg;
+      msgDiv.appendChild(label2);
+      msgArea.appendChild(msgDiv);
+    });
+    sdInner.appendChild(msgArea);
+    sdDiv.appendChild(sdInner);
+    sdDiv.innerHTML += `<div style="text-align:center;font-size:10px;color:#888;margin-top:4px">Diagram ${label}</div>`;
+    return sdDiv;
+  }
+
+  area.appendChild(makeSeqDiagram('1 — Sequence Diagram'));
+
+  // Collaboration diagram
+  const collDiv = document.createElement('div');
+  collDiv.style.cssText = 'min-width:280px;flex:1;font-family:Arial';
+  collDiv.innerHTML = `<div style="font-weight:bold;margin-bottom:10px;font-size:12px;color:#333">Collaboration Diagram — ${p.title}</div>`;
+  const collInner = document.createElement('div');
+  collInner.style.cssText = 'border:1.5px dashed #bbb;padding:14px;background:#fafafa;font-family:Arial;font-size:11px;min-height:200px';
+  const collBoxes = document.createElement('div');
+  collBoxes.style.cssText = 'display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:center;padding:10px';
+  p.actors.slice(0, Math.min(4, p.actors.length)).forEach((a, i) => {
+    const b = document.createElement('div');
+    b.style.cssText = 'border:1.5px solid #555;padding:4px 10px;background:#e8f0fb;font-size:11px;font-weight:bold;text-align:center';
+    b.textContent = a;
+    collBoxes.appendChild(b);
+    if(i < Math.min(3, p.actors.length-1)) {
+      const arr = document.createElement('div');
+      arr.style.cssText = 'font-size:14px;color:#4a90d9';
+      arr.textContent = '→';
+      collBoxes.appendChild(arr);
+    }
+  });
+  collInner.appendChild(collBoxes);
+  collDiv.appendChild(collInner);
+  collDiv.innerHTML += `<div style="text-align:center;font-size:10px;color:#888;margin-top:4px">Diagram 2 — Collaboration Diagram</div>`;
+  area.appendChild(collDiv);
+  canvas.appendChild(area);
+}
+
+function renderStateActivity(p, canvas) {
+  canvas.innerHTML = `<div class="diagram-title">Statechart & Activity — ${p.title}</div>`;
+  const area = document.createElement('div');
+  area.style.cssText = 'display:flex;gap:48px;flex-wrap:wrap;align-items:flex-start';
+
+  // Statechart
+  const stDiv = document.createElement('div');
+  stDiv.style.cssText = 'min-width:300px;flex:1;font-family:Arial';
+  stDiv.innerHTML = `<div style="font-weight:bold;margin-bottom:10px;font-size:12px;color:#333">Statechart — ${p.title}</div>`;
+  const stInner = document.createElement('div');
+  stInner.style.cssText = 'border:1.5px dashed #bbb;padding:16px;background:#fafafa;min-height:120px';
+  // Initial state dot
+  const initRow = document.createElement('div');
+  initRow.style.cssText = 'display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:center';
+  initRow.innerHTML = `<div style="width:14px;height:14px;background:#333;border-radius:50%;flex-shrink:0"></div>`;
+  p.states.forEach((s, i) => {
+    initRow.innerHTML += `<div style="font-size:11px;color:#333">→</div>`;
+    const st = document.createElement('div');
+    st.style.cssText = 'border:1.5px solid #555;padding:4px 10px;border-radius:18px;background:#fff;font-size:11px;font-family:Arial;white-space:nowrap';
+    st.textContent = s;
+    initRow.appendChild(st);
+    if(p.transitions && p.transitions[i]) {
+      const lbl = document.createElement('div');
+      lbl.style.cssText = 'font-size:9px;color:#4a90d9;margin-top:-8px;text-align:center;width:100%';
+    }
+  });
+  initRow.innerHTML += `<div style="width:14px;height:14px;background:#333;border-radius:50%;border:3px solid #333;background:#fff;flex-shrink:0"></div>`;
+  stInner.appendChild(initRow);
+  // Transitions
+  if(p.transitions) {
+    const trel = document.createElement('div');
+    trel.className = 'rel-section';
+    trel.style.marginTop = '12px';
+    p.transitions.forEach(t => {
+      trel.innerHTML += `<div style="font-size:10px">● ${t.from} → <span style="color:#4a90d9">${t.label}</span> → ${t.to}</div>`;
+    });
+    stInner.appendChild(trel);
+  }
+  stDiv.appendChild(stInner);
+  stDiv.innerHTML += `<div style="text-align:center;font-size:10px;color:#888;margin-top:4px">Diagram 1 — Statechart Diagram</div>`;
+  area.appendChild(stDiv);
+
+  // Activity Diagram
+  const actDiv = document.createElement('div');
+  actDiv.style.cssText = 'min-width:220px;flex:1;font-family:Arial';
+  actDiv.innerHTML = `<div style="font-weight:bold;margin-bottom:10px;font-size:12px;color:#333">Activity Diagram — ${p.title}</div>`;
+  const actInner = document.createElement('div');
+  actInner.style.cssText = 'border:1.5px dashed #bbb;padding:16px;background:#fafafa;display:flex;flex-direction:column;align-items:center;gap:0;min-height:120px';
+  actInner.innerHTML = `<div style="width:14px;height:14px;background:#333;border-radius:50%;margin-bottom:4px"></div>`;
+  p.activities.forEach((a, i) => {
+    actInner.innerHTML += `
+      <div style="width:2px;height:10px;background:#555"></div>
+      <div style="border:1.5px solid #555;padding:4px 18px;background:#fff3cd;font-size:11px;border-radius:3px;text-align:center;min-width:140px;white-space:nowrap">${a}</div>
+    `;
+  });
+  actInner.innerHTML += `<div style="width:2px;height:10px;background:#555"></div><div style="width:14px;height:14px;border-radius:50%;border:3px solid #333;background:#333;box-shadow:0 0 0 3px #fff,0 0 0 5px #333"></div>`;
+  actDiv.appendChild(actInner);
+  actDiv.innerHTML += `<div style="text-align:center;font-size:10px;color:#888;margin-top:4px">Diagram 2 — Activity Diagram</div>`;
+  area.appendChild(actDiv);
+  canvas.appendChild(area);
+}
+
+function render() {
+  const p = problems[currentIdx];
+  const canvas = document.getElementById('mainCanvas');
+  canvas.innerHTML = '';
+  if(p.type === 'dfd-usecase') renderDFDUseCase(p, canvas);
+  else if(p.type === 'class-object') renderClassObject(p, canvas);
+  else if(p.type === 'sequence') renderSequence(p, canvas);
+  else if(p.type === 'state-activity') renderStateActivity(p, canvas);
+  document.getElementById('diagCounter').textContent = `Problem ${p.id} of 78 — ${p.section}`;
+  document.getElementById('statusProblem').textContent = `Problem ${p.id}: ${p.title}`;
+}
+
+buildSidebar(filteredProblems);
+render();
+</script>
+</body>
+</html>
